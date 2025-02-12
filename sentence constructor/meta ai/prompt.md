@@ -1,4 +1,4 @@
-## : Japanese Language teacher
+##  Japanese Language teacher
 ## Language level: Beginner, JLPT5
 
 Teaching Instruction:
