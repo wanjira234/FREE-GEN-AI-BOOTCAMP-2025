@@ -1,0 +1,87 @@
+---
+description: 
+globs: 
+---
+
+# Your rule content
+
+- You can @ files here
+- You can use markdown but dont have to
+
+"""
+Flask Best Practices for Junior Developers
+----------------------------------------
+Key rules to follow when building Flask applications.
+"""
+
+from flask import Flask, request, jsonify
+from functools import wraps
+import os
+from typing import Callable, Any
+
+app = Flask(__name__)
+
+# Rule 1: Use Environment Variables for Configuration
+# ------------------------------------------------
+# BAD: Hard-coding sensitive configuration
+# app.config['SECRET_KEY'] = 'my-secret-key'
+# app.config['DATABASE_URL'] = 'postgresql://user:password@localhost/db'
+
+# GOOD: Load configuration from environment variables
+app.config['SECRET_KEY'] = os.getenv('FLASK_SECRET_KEY')
+app.config['DATABASE_URL'] = os.getenv('DATABASE_URL')
+
+
+# Rule 2: Implement Proper Error Handling
+# -------------------------------------
+def handle_errors(f: Callable) -> Callable:
+    @wraps(f)
+    def wrapper(*args: Any, **kwargs: Any) -> Any:
+        try:
+            return f(*args, **kwargs)
+        except ValueError as e:
+            return jsonify({"error": "Invalid input", "message": str(e)}), 400
+        except Exception as e:
+            # Log the error here
+            return jsonify({"error": "Internal server error"}), 500
+    return wrapper
+
+
+@app.route('/api/user/<int:user_id>')
+@handle_errors
+def get_user(user_id: int):
+    if user_id <= 0:
+        raise ValueError("User ID must be positive")
+    # ... fetch user logic here ...
+    return jsonify({"user_id": user_id})
+
+
+# Rule 3: Use Blueprints for Route Organization
+# ------------------------------------------
+from flask import Blueprint
+
+# Create blueprints for different parts of your application
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+users_bp = Blueprint('users', __name__, url_prefix='/users')
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
+
+@auth_bp.route('/login', methods=['POST'])
+@handle_errors
+def login():
+    data = request.get_json()
+    # ... login logic here ...
+    return jsonify({"message": "Login successful"})
+
+@users_bp.route('/', methods=['GET'])
+@handle_errors
+def list_users():
+    # ... user listing logic here ...
+    return jsonify({"users": []})
+
+# Register blueprints
+app.register_blueprint(auth_bp)
+app.register_blueprint(users_bp)
+app.register_blueprint(admin_bp)
+
+if __name__ == '__main__':
+    app.run(debug=os.getenv('FLASK_DEBUG', 'False') == 'True')
